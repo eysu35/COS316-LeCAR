@@ -4,13 +4,21 @@ import (
 	"container/list"
 )
 
-//
+// LeCaR is a fixed-size in-memory cache that uses Learning Cache Replacement 
+// to determine the optimal eviction policy
 
 type LeCaR struct {
-	cache       map[string][]byte        // map of string keys to slice values
+	cache        map[string][]byte       // map of string keys to slice values
+
+	historyLRU   map[string]int 		 // keeps track of history of evictions by LRU
+	historyLFU   map[string]int		     // keeps track of history of evictions by LFU
+
+	wLRU         float					 // weight of LRU policy
+	wLFU         float					 // weight of LFU policy
+	learningRate float 				     // hyperparameter used for how quickly we update weights
+	discountRate float 					 // hyperparameter used for determine regret factor
+
 	cap         int                      // the max capacity of the cache
-	keyList     *list.List               // keeps track of lru order
-	keyPointers map[string]*list.Element // keeps track of location of each key in list
 	size        int                      // number of bytes currently in the cache
 	stats       Stats                    // stats struct
 }
