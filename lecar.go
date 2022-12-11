@@ -20,13 +20,13 @@ type LeCaR struct {
 	cache map[string][]byte // map of string keys to slice values
 	cap   int               // the max capacity of the cache
 	size  int               // number of bytes currently in the cache
-	clock int				// keeps track of the universal passing of time
+	clock int               // keeps track of the universal passing of time
 
 	// LFU
 
-	LFUKeyToFreq      map[string]int		// maps keys to frequencies
+	LFUKeyToFreq  map[string]int         // maps keys to frequencies
 	LFUFreqToKeys map[int]map[string]int // maps freqs to list of keys
-	LFUFreqOrder IntHeap            // keep a min-ordered list of freqs
+	LFUFreqOrder  IntHeap                // keep a min-ordered list of freqs
 
 	// LRU
 	LRU         *list.List               // queue of least recently accessed keys
@@ -46,22 +46,22 @@ type LeCaR struct {
 // NewLeCaR returns a pointer to a new LeCaR with a capacity to store limit bytes
 func NewLeCaR(limit int, learningRate float64, discountRate float64) *LeCaR {
 	r := LeCaR{cache: map[string][]byte{},
-		cap:          limit,
-		size:         0,
-		clock:        0,
-		LFUKeyToFreq: map[string]int{},
-		LFUFreqToKeys:  map[int]map[string]int,
-		LFUFreqOrder:     IntHeap{},
-		LRU:          list.New(),
-		LRUPointers:  map[string]*list.Element{},
-		historyLFU:   map[string]int{},
-		historyLRU:   map[string]int{},
-		wLRU:         0.5,
-		wLFU:         0.5,
-		learningRate: learningRate,                             // initialized via LeCar paper
-		discountRate: math.Pow(discountRate, 1/float64(limit))} // initialized via LeCaR paper
+		cap:           limit,
+		size:          0,
+		clock:         0,
+		LFUKeyToFreq:  map[string]int{},
+		LFUFreqToKeys: map[int]map[string]int{},
+		LFUFreqOrder:  IntHeap{},
+		LRU:           list.New(),
+		LRUPointers:   map[string]*list.Element{},
+		historyLFU:    map[string]int{},
+		historyLRU:    map[string]int{},
+		wLRU:          0.5,
+		wLFU:          0.5,
+		learningRate:  learningRate,                             // initialized via LeCar paper
+		discountRate:  math.Pow(discountRate, 1/float64(limit))} // initialized via LeCaR paper
 
-	heap.Init(&r.LFUFreqs)
+	heap.Init(&r.LFUFreqOrder)
 	return &r
 }
 
@@ -75,23 +75,23 @@ func (lecar *LeCaR) RemainingStorage() int {
 	return lecar.cap - lecar.size
 }
 
-func(lecar *LeCaR) UpdateWeight(key string, time int, policy string){
+func (lecar *LeCaR) UpdateWeight(key string, time int, policy string) {
 	timePassed := lecar.clock - time
-	r := math.Pow(lecar.discountRate, timePassed) // discount rate, by LeCaR paper
+	r := math.Pow(lecar.discountRate, float64(timePassed)) // discount rate, by LeCaR paper
 
 	// update relevant weight
-	if policy == "LFU"{
-		lecar.wLFU = lecar.wLFU * math.Pow(math.E, lecar.learningRate * r) // update by LeCaR paper
+	if policy == "LFU" {
+		lecar.wLFU = lecar.wLFU * math.Pow(math.E, lecar.learningRate*r) // update by LeCaR paper
 	}
 
-	if policy == "LRU"{
-		lecar.wLRU = lecar.wLRU * math.Pow(math.E, lecar.learningRate * r) // update by LeCaR paper
+	if policy == "LRU" {
+		lecar.wLRU = lecar.wLRU * math.Pow(math.E, lecar.learningRate*r) // update by LeCaR paper
 	}
 
 	// normalize weights
 	lecar.wLFU = lecar.wLFU / (lecar.wLFU + lecar.wLRU)
 	lecar.wLRU = 1 - lecar.wLFU
-	
+
 }
 
 // Get returns the value associated with the given key, if it exists.
@@ -105,33 +105,33 @@ func (lecar *LeCaR) Get(key string) (value []byte, ok bool) {
 		// check if request is in either history, if so, update policy weights
 
 		//LFU
-		if time, ok := lecar.historyLFU;ok{
-			delete(lecar.historyLFU[key]) // so we don't double update the weights
-			updateWeight(key, time, "LFU")
+		if time, ok := lecar.historyLFU[key]; ok {
+			delete(lecar.historyLFU, key) // so we don't double update the weights
+			lecar.UpdateWeight(key, time, "LFU")
 		}
 
 		//LRU
-		if time, ok := lecar.historyLFU;ok{
-			delete(lecar.historyLRU[key]) // so we don't double update the weights
-			updateWeight(key, time, "LRU")
+		if time, ok := lecar.historyLFU[key]; ok {
+			delete(lecar.historyLRU, key) // so we don't double update the weights
+			lecar.UpdateWeight(key, time, "LRU")
 		}
-		
+
 		lecar.stats.Misses += 1
 	} else {
 		// cache hit
 
 		// LFU
-		oldFreq := lecar.LFUKeyToFreq[key] // old freq
+		oldFreq := lecar.LFUKeyToFreq[key]   // old freq
 		keys := lecar.LFUFreqToKeys[oldFreq] // map of all keys with oldFreq
 		// if only one key with old frequency, remove that freq from the freq heap
-		if len(keys) == 1{
+		if len(keys) == 1 {
 			heap.Remove(lecar.LFUFreqOrder, oldFreq)
 		}
 		delete(keys, key) // remove key from old frequency list
 
 		lecar.LFUKeyToFreq[key] = oldFreq + 1
-		lecar.LFUFreqToKeys[oldFreq + 1][key] = 1 // add key to new freq list with arbitrary val
-		heap.Push(lecar.LFUFreqOrder, oldFreq + 1) // add new frequency to heap, noop if it already exists
+		lecar.LFUFreqToKeys[oldFreq+1][key] = 1  // add key to new freq list with arbitrary val
+		heap.Push(lecar.LFUFreqOrder, oldFreq+1) // add new frequency to heap, noop if it already exists
 
 		// LRU
 		ptr := lecar.LRUPointers[key]
