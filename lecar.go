@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"container/list"
 	"math"
+	"math/rand"
 )
 
 // LeCaR is a fixed-size in-memory cache that uses Learning Cache Replacement
@@ -146,24 +147,71 @@ func (lecar *LeCaR) Get(key string) (value []byte, ok bool) {
 // Remove removes and returns the value associated with the given key, if it exists.
 // ok is true if a value was found and false otherwise
 func (lecar *LeCar) Remove(key string) (value []byte, ok bool) {
-	val, ok := lru.cache[key]
+	val, ok := lecar.cache[key]
 
+	// if key not found, just return nil, false
 	if !ok {
 		return val, ok
 	}
 
-	delete(lru.cache, key) // remove from the map
+	// if key exists in cache, sample an eviction policy based on our weights
+	// and evict the key from the cache according to that policy 
 
-	// remove from the key list by searching for pointer
-	ptr := lru.keyPointers[key]
-	_ = lru.keyList.Remove(ptr)
+	sample := math.rand.Float64() // returns a float in [0.0. 1.0)
+	// let random sample determine policy based on which weight interval it falls in
+	if sample <= lecar.wLFU{
+		policy := "lfu"
+	}else{
+		policy := "lru"
+	}
 
-	delete(lru.keyPointers, key) //remove from pointers map
+	// evict the key based on the chosen policy
+	// LFU
+	if policy == "lfu"{
+		delete(lecar.cache, key) // remove from the cache
 
-	// decrease size by size of deletion
-	deletionSize := len(val) + len(key)
-	lru.size = lru.size - deletionSize
+		// remove from LFU
+		freq := lecar.LFUKeyToFreq[key] // store the frequency of the key to be deleted
+		delete(lecar.LFUKeyToFreq, key) // remove from LFU map
+		
+		// remove the key from the list of keys corresponding to one frequency
+		delete(lecar.LFUFreqToKeys[key], freq) 
+		
+		/*
+		LAST THING TO DO HERE IS THE REMOVE THE FREQ FROM THE HEAP IF it is the min freq
+		but how do we know if we cant pop it? should we pop, check if its the min, and if not
+		push it again? Will that maintain order/ is that redundant???
+		*/
 
+		// add to historyLFU
+		lecar.historyLFU[key] = lecar.clock // value = current time
+
+		// decrease size by size of deletion
+		deletionSize := len(val) + len(key)
+		lecar.size = lecar.size - deletionSize
+	}
+
+	// LRU
+	else if policy == "lru" {
+		delete(lecar.cache, key) // remove from the cache
+
+		// remove from the key list by searching for pointer
+		ptr := lecar.LRUPointers[key]
+		_ = lru.LRU.Remove(ptr)
+		delete(lecar.LRUPointers, ptr)//remove from pointers map
+
+		// add to historyLRU
+		lecar.historyLRU[key] = lecar.clock // value = current time
+
+		// decrease size by size of deletion
+		deletionSize := len(val) + len(key)
+		lecar.size = lecar.size - deletionSize
+		
+	}
+
+	// increment the clock to keep track of number of evictions 
+	lecar.clock = lecar.clock + 1
+	
 	return val, true
 }
 
