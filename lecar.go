@@ -1,7 +1,9 @@
 package main
 
 import (
+	"container/heap"
 	"container/list"
+	"math"
 )
 
 // LeCaR is a fixed-size in-memory cache that uses Learning Cache Replacement
@@ -12,6 +14,8 @@ type Stats struct {
 	Misses int
 }
 
+// type IntHeap []int
+
 type LeCaR struct {
 	cache map[string][]byte // map of string keys to slice values
 	cap   int               // the max capacity of the cache
@@ -19,7 +23,7 @@ type LeCaR struct {
 
 	// LFU
 	LFU      map[int]*list.List // maps freqs to list of keys
-	LFUFreqs *IntHeap           // keep a min-ordered list of freqs
+	LFUFreqs IntHeap            // keep a min-ordered list of freqs
 
 	// LRU
 	LRU         *list.List               // queue of least recently accessed keys
@@ -37,18 +41,20 @@ type LeCaR struct {
 }
 
 // NewLeCaR returns a pointer to a new LeCaR with a capacity to store limit bytes
-func NewLeCaR(limit int) *LeCaR {
+func NewLeCaR(limit int, learningRate float64, discountRate float64) *LeCaR {
 	r := LeCaR{cache: map[string][]byte{},
-			   cap: limit,
-			   size: 0,
-			   LFU: map[int]*list.List{},
-			   LFUFreqs: IntHeap{},
-			   LRU: list.New(),
-			   LRUPointers: map[string]*list.Element{},
-			   wLRU: 0.5,
-			   wLFU: 0.5,
-			   learningRate: 0.45,			   // initialized via LeCar paper
-			   discountRate: 0.005**(1/limit)} // initialized via LeCaR paper
+		cap:          limit,
+		size:         0,
+		LFU:          map[int]*list.List{},
+		LFUFreqs:     IntHeap{},
+		LRU:          list.New(),
+		LRUPointers:  map[string]*list.Element{},
+		wLRU:         0.5,
+		wLFU:         0.5,
+		learningRate: learningRate,                             // initialized via LeCar paper
+		discountRate: math.Pow(discountRate, 1/float64(limit))} // initialized via LeCaR paper
+
+	heap.Init(&r.LFUFreqs)
 	return &r
 }
 
