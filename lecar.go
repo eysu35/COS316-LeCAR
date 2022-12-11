@@ -175,7 +175,7 @@ func (lecar *LeCar) Remove(key string) (value []byte, ok bool) {
 		delete(lecar.LFUKeyToFreq, key) // remove from LFU map
 		
 		// remove the key from the list of keys corresponding to one frequency
-		delete(lecar.LFUFreqToKeys[key], freq) 
+		delete(lecar.LFUFreqToKeys[freq][key], freq) 
 		
 		/*
 		LAST THING TO DO HERE IS THE REMOVE THE FREQ FROM THE HEAP IF it is the min freq
