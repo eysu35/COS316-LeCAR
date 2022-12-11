@@ -1,8 +1,10 @@
+package main
+
 import (
 	"container/list"
 )
 
-// 
+//
 
 type LeCaR struct {
 	cache       map[string][]byte        // map of string keys to slice values
