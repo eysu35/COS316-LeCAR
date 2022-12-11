@@ -4,23 +4,36 @@ import (
 	"container/list"
 )
 
-// LeCaR is a fixed-size in-memory cache that uses Learning Cache Replacement 
+// LeCaR is a fixed-size in-memory cache that uses Learning Cache Replacement
 // to determine the optimal eviction policy
 
+type Stats struct {
+	Hits   int
+	Misses int
+}
+
 type LeCaR struct {
-	cache        map[string][]byte       // map of string keys to slice values
+	cache map[string][]byte // map of string keys to slice values
+	cap   int               // the max capacity of the cache
+	size  int               // number of bytes currently in the cache
 
-	historyLRU   map[string]int 		 // keeps track of history of evictions by LRU
-	historyLFU   map[string]int		     // keeps track of history of evictions by LFU
+	// LFU
+	LFU      map[int]*list.List // maps freqs to list of keys
+	LFUFreqs *IntHeap           // keep a min-ordered list of freqs
 
-	wLRU         float					 // weight of LRU policy
-	wLFU         float					 // weight of LFU policy
-	learningRate float 				     // hyperparameter used for how quickly we update weights
-	discountRate float 					 // hyperparameter used for determine regret factor
+	// LRU
+	LRU         *list.List               // queue of least recently accessed keys
+	LRUPointers map[string]*list.Element // keeps track of location of each key in list
 
-	cap         int                      // the max capacity of the cache
-	size        int                      // number of bytes currently in the cache
-	stats       Stats                    // stats struct
+	historyLRU map[string]int // keeps track of history of evictions by LRU
+	historyLFU map[string]int // keeps track of history of evictions by LFU
+
+	wLRU         float64 // weight of LRU policy
+	wLFU         float64 // weight of LFU policy
+	learningRate float64 // hyperparameter used for how quickly we update weights
+	discountRate float64 // hyperparameter used for determine regret factor
+
+	stats Stats // stats struct
 }
 
 // NewLeCaR returns a pointer to a new LeCaR with a capacity to store limit bytes
