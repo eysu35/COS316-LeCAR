@@ -38,7 +38,17 @@ type LeCaR struct {
 
 // NewLeCaR returns a pointer to a new LeCaR with a capacity to store limit bytes
 func NewLeCaR(limit int) *LeCaR {
-	r := LeCaR{}
+	r := LeCaR{cache: map[string][]byte{},
+			   cap: limit,
+			   size: 0,
+			   LFU: map[int]*list.List{},
+			   LFUFreqs: IntHeap{},
+			   LRU: list.New(),
+			   LRUPointers: map[string]*list.Element{},
+			   wLRU: 0.5,
+			   wLFU: 0.5,
+			   learningRate: 0.45,			   // initialized via LeCar paper
+			   discountRate: 0.005**(1/limit)} // initialized via LeCaR paper
 	return &r
 }
 
