@@ -146,7 +146,7 @@ func (lecar *LeCaR) Get(key string) (value []byte, ok bool) {
 
 // Remove removes and returns the value associated with the given key, if it exists.
 // ok is true if a value was found and false otherwise
-func (lecar *LeCar) Remove(key string) (value []byte, ok bool) {
+func (lecar *LeCar) Remove(key string, policy string) (value []byte, ok bool) {
 	val, ok := lecar.cache[key]
 
 	// if key not found, just return nil, false
@@ -154,18 +154,7 @@ func (lecar *LeCar) Remove(key string) (value []byte, ok bool) {
 		return val, ok
 	}
 
-	// if key exists in cache, sample an eviction policy based on our weights
-	// and evict the key from the cache according to that policy 
-
-	sample := math.rand.Float64() // returns a float in [0.0. 1.0)
-	// let random sample determine policy based on which weight interval it falls in
-	if sample <= lecar.wLFU{
-		policy := "lfu"
-	}else{
-		policy := "lru"
-	}
-
-	// evict the key based on the chosen policy
+	// if key exists, evict the key based on the chosen policy
 	// LFU
 	if policy == "lfu"{
 		delete(lecar.cache, key) // remove from the cache
@@ -220,36 +209,69 @@ func (lecar *LeCar) Remove(key string) (value []byte, ok bool) {
 func (lecar *LeCaR) Set(key string, value []byte) bool {
 	// check if sufficient storage is available
 	setSize := len(key) + len(value)
-	if setSize > lru.cap {
+	if setSize > lecar.cap {
 		return false
 	}
 
 	// check if the key already exists
-	_, ok := lru.cache[key]
+	_, ok := lecar.cache[key]
 	if ok {
-		lru.Remove(key)
+		// if key exists, remove it from the cache since we want to update value
+		sample := math.rand.Float64() // returns a float in [0.0. 1.0)
+		// let random sample determine policy based on which weight interval it falls in
+		if sample <= lecar.wLFU{
+			policy := "lfu"
+		}else{
+			policy := "lru"
+		}
+		lecar.Remove(key, policy)
 	}
 
 	// remove elements until there is enough space for the new key value pair
-	if lru.RemainingStorage() < setSize {
+	if lecar.RemainingStorage() < setSize {
 
-		for lru.RemainingStorage() < setSize {
-			keyTemp := lru.keyList.Back().Value
-			keyRemove := keyTemp.(string)
-			_, _ = lru.Remove(keyRemove)
+		for lecar.RemainingStorage() < setSize {
+			// again, sample eviction policy from weights and evict accordingly
+			sample := math.rand.Float64() // returns a float in [0.0. 1.0)
+			// let random sample determine policy based on which weight interval it falls in
+			if sample <= lecar.wLFU{
+				policy := "lfu"
+			}else{
+				policy := "lru"
+			}
+
+			if policy == "lfu"{
+				minFreq := lecar.LFUFreqOrder.Pop() // find the lowest frequency?
+				// is there a peek method for the minheap??? is it ok to pop this if there are more with this val?
+				keyRemove := lecar.LFUFreqToKeys[minFreq][0] // just evict the first key with the min freq
+				_, _ = lecar.Remove(keyRemove, policy)
+			}
+
+			if policy == "lru"{
+				keyTemp := lecar.LRU.Back().Value
+				keyRemove := keyTemp.(string)
+				_, _ = lecar.Remove(keyRemove, policy)
+			}
 		}
 	}
 
-	// Update cache, keylist, and size
-	lru.cache[key] = value
+	// Update cache, LFU cache, and LRU cache
+	lecar.cache[key] = value
+	lecar.size += setSize
+
+	// LFU
+	lecar.LFUKeyToFreq[key] = 1
+	lecar.LFUFreqToKeys[1][key] = 1
+	lecar.LFUFreqOrder.Push(1)
+
+	//LRU
 	ptr := &list.Element{} // blank initialization
-	if lru.keyList.Len() == 0 {
-		ptr = lru.keyList.PushFront(key)
+	if lecar.LRU.Len() == 0 {
+		ptr = lecar.LRU.PushFront(key)
 	} else {
-		ptr = lru.keyList.InsertBefore(key, lru.keyList.Front())
+		ptr = lecar.LRU.InsertBefore(key, lecar.LRU.Front())
 	}
-	lru.keyPointers[key] = ptr
-	lru.size += setSize
+	lecar.LRUPointers[key] = ptr
 
 	return true
 }
