@@ -158,6 +158,8 @@ func (lecar *LeCaR) Get(key string) (value []byte, ok bool) {
 		lecar.stats.Hits += 1
 	}
 
+	lecar.clock = lecar.clock + 1
+
 	return val, ok
 }
 
