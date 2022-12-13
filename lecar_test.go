@@ -5,26 +5,29 @@ import (
 	"testing"
 )
 
-var CACHE_SIZE = 20
 var LEARNING_RATE = 0.45
 var DISCOUNT_RATE = 0.005
-var c = NewLeCaR(CACHE_SIZE, LEARNING_RATE, DISCOUNT_RATE)
 
 func TestBasics(t *testing.T) {
+	cache_size := 1000
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
 	m := c.MaxStorage()
 
-	if m != CACHE_SIZE {
+	if m != cache_size {
 		t.Errorf("incorrect MaxStorage() result: %d", m)
 		t.FailNow()
 	}
 
 	r := c.RemainingStorage()
-	if r != CACHE_SIZE {
+	if r != cache_size {
 		t.Errorf("incorrect RemainingStorage() result: %d", r)
 	}
 }
 
 func TestBasicSetAndGet(t *testing.T) {
+	cache_size := 1000
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
+
 	for i := 0; i < 4; i++ {
 		key := fmt.Sprintf("key%d", i)
 		val := []byte(key)
@@ -43,7 +46,8 @@ func TestBasicSetAndGet(t *testing.T) {
 }
 
 func TestBasicEviction(t *testing.T) {
-	CACHE_SIZE = 20
+	cache_size := 20
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
 
 	for i := 0; i < 2; i++ {
 		key := fmt.Sprintf("!key%d", i)
@@ -84,5 +88,22 @@ func TestBasicEviction(t *testing.T) {
 	}
 
 	fmt.Println(c.CacheToString())
+	fmt.Println(c.WeightsToString())
 	fmt.Println(c.HistoryToString())
+
+	_, ok = c.Get("!key1")
+	if ok {
+		t.Errorf("Cache should not contain key1")
+		t.FailNow()
+	}
+
+	fmt.Println(c.WeightsToString())
+	fmt.Println(c.stats.toString())
+}
+
+func TestReweighting1(t *testing.T) {
+	numEntries := 2
+	cache_size := 8 * numEntries
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
+
 }

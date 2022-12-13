@@ -16,7 +16,10 @@ type Stats struct {
 	Misses int
 }
 
-// type IntHeap []int
+func (stats Stats) toString() string {
+	rate := float64(stats.Hits) / float64(stats.Hits+stats.Misses)
+	return fmt.Sprintf("%d hits, %d misses (%f hit rate)", stats.Hits, stats.Misses, rate)
+}
 
 type LeCaR struct {
 	cache map[string][]byte // map of string keys to slice values
@@ -114,7 +117,7 @@ func (lecar *LeCaR) Get(key string) (value []byte, ok bool) {
 		}
 
 		//LRU
-		if time, ok := lecar.historyLFU[key]; ok {
+		if time, ok := lecar.historyLRU[key]; ok {
 			delete(lecar.historyLRU, key) // so we don't double update the weights
 			lecar.UpdateWeight(key, time, "LRU")
 		}
@@ -303,19 +306,23 @@ func (lecar *LeCaR) CacheToString() string {
 	for key, val := range lecar.cache {
 		str = str + key + ": " + string(val) + "\n"
 	}
-	str = str + fmt.Sprintf("policy (LFU/LRU): %f/%f", lecar.wLFU, lecar.wLRU)
 	return str
+}
+
+func (lecar *LeCaR) WeightsToString() string {
+	return fmt.Sprintf("policy (LFU/LRU): %f/%f", lecar.wLFU, lecar.wLRU)
 }
 
 // Examine contents of each history
 func (lecar *LeCaR) HistoryToString() string {
 	str := "LFU History: \n"
 	for key, val := range lecar.historyLFU {
-		str = str + key + ": " + string(val) + "\n"
+		str = str + key + ": " + fmt.Sprint(val) + "\n"
 	}
 	str = str + "LRU History: \n"
 
-	for key, val = range lecar.historyLRU {
-		str = str + key + ": " + string(val) + "\n"
+	for key, val := range lecar.historyLRU {
+		str = str + key + ": " + fmt.Sprint(val) + "\n"
 	}
+	return str
 }
