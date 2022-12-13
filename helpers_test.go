@@ -1,4 +1,4 @@
-package cache
+package main
 
 import (
 	"testing"
@@ -7,19 +7,6 @@ import (
 /******************************************************************************/
 /*                                 Helpers                                    */
 /******************************************************************************/
-
-// CacheType returns a string representing the type (i.e. eviction scheme) of
-// this cache.
-func cacheType(cache Cache) string {
-	switch cache.(type) {
-	case *LRU:
-		return "LRU"
-	case *FIFO:
-		return "FIFO"
-	default:
-		return "cache"
-	}
-}
 
 // Returns true iff a and b represent equal slices of bytes.
 func bytesEqual(a []byte, b []byte) bool {
@@ -41,9 +28,9 @@ func bytesEqual(a []byte, b []byte) bool {
 }
 
 // Fails test t with an error message if fifo.MaxStorage() is not equal to capacity
-func checkCapacity(t *testing.T, cache Cache, capacity int) {
+func checkCapacity(t *testing.T, cache LeCaR, capacity int) {
 	max := cache.MaxStorage()
 	if max != capacity {
-		t.Errorf("Expected %s to have %d MaxStorage, but it had %d", cacheType(cache), capacity, max)
+		t.Errorf("Expected cache to have %d MaxStorage, but it had %d", capacity, max)
 	}
 }

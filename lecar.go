@@ -63,6 +63,7 @@ func NewLeCaR(limit int, learningRate float64, discountRate float64) *LeCaR {
 		discountRate:  math.Pow(discountRate, 1/float64(limit))} // initialized via LeCaR paper
 
 	heap.Init(&r.LFUFreqOrder)
+	r.LFUFreqToKeys[1] = make(map[string]int) // add the map for frequency of 1
 	return &r
 }
 
@@ -124,13 +125,16 @@ func (lecar *LeCaR) Get(key string) (value []byte, ok bool) {
 		// LFU
 		oldFreq := lecar.LFUKeyToFreq[key]   // old freq
 		keys := lecar.LFUFreqToKeys[oldFreq] // map of all keys with oldFreq
-		// if only one key with old frequency, remove that freq from the freq heap
-		if len(keys) == 1 {
-			heap.Remove(lecar.LFUFreqOrder, oldFreq)
-		}
+
 		delete(keys, key) // remove key from old frequency list
 
+		// increment frequency upon access
 		lecar.LFUKeyToFreq[key] = oldFreq + 1
+
+		if lecar.LFUFreqToKeys[oldFreq+1] == nil {
+			lecar.LFUFreqToKeys[oldFreq+1] = make(map[string]int)
+		}
+
 		lecar.LFUFreqToKeys[oldFreq+1][key] = 1  // add key to new freq list with arbitrary val
 		heap.Push(lecar.LFUFreqOrder, oldFreq+1) // add new frequency to heap, noop if it already exists
 

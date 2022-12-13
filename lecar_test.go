@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -21,4 +22,51 @@ func TestBasics(t *testing.T) {
 	if r != CACHE_SIZE {
 		t.Errorf("incorrect RemainingStorage() result: %d", r)
 	}
+}
+
+func TestBasicSetAndGet(t *testing.T) {
+	for i := 0; i < 4; i++ {
+		key := fmt.Sprintf("key%d", i)
+		val := []byte(key)
+		ok := c.Set(key, val)
+		if !ok {
+			t.Errorf("Failed to add binding with key: %s", key)
+			t.FailNow()
+		}
+
+		res, _ := c.Get(key)
+		if !bytesEqual(res, val) {
+			t.Errorf("Wrong value %s for binding with key: %s", res, key)
+			t.FailNow()
+		}
+	}
+}
+
+func TestBasicEviction(t *testing.T) {
+	CACHE_SIZE = 20
+
+	for i := 0; i < 2; i++ {
+		key := fmt.Sprintf("!key%d", i)
+		val := []byte(key)
+		ok := c.Set(key, val)
+		if !ok {
+			t.Errorf("Failed to add binding with key: %s", key)
+			t.FailNow()
+		}
+	}
+
+	// arbitrarily increase the freq of one entry
+	for i := 0; i < 10; i++ {
+		c.Get("!key0")
+	}
+
+	// try to add something else
+	key := "!key2"
+	val := []byte(key)
+	ok := c.Set(key, val)
+
+	if ok {
+		t.Errorf("should not have worked")
+	}
+
 }
