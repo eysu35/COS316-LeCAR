@@ -50,7 +50,14 @@ type LeCaR struct {
 }
 
 // NewLeCaR returns a pointer to a new LeCaR with a capacity to store limit bytes
-func NewLeCaR(limit int, learningRate float64, discountRate float64) *LeCaR {
+func NewLeCaR(limit int, learningRate float64, discountRate float64, initialLRUWeight float64) *LeCaR {
+	if !(0 < initialLRUWeight && initialLRUWeight < 1) {
+		panic("Invalid initial LRU weight: must be in (0, 1)")
+	}
+
+	// other validation???
+
+	// make the struct
 	r := LeCaR{cache: map[string][]byte{},
 		cap:           limit,
 		size:          0,
@@ -62,8 +69,8 @@ func NewLeCaR(limit int, learningRate float64, discountRate float64) *LeCaR {
 		LRUPointers:   map[string]*list.Element{},
 		historyLFU:    map[string]int{},
 		historyLRU:    map[string]int{},
-		wLRU:          0.5,
-		wLFU:          0.5,
+		wLRU:          initialLRUWeight,
+		wLFU:          1 - initialLRUWeight,
 		learningRate:  learningRate,                             // initialized via LeCar paper
 		discountRate:  math.Pow(discountRate, 1/float64(limit))} // initialized via LeCaR paper
 

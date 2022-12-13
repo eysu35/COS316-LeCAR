@@ -10,7 +10,7 @@ var DISCOUNT_RATE = 0.005
 
 func TestBasics(t *testing.T) {
 	cache_size := 1000
-	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE, 0.5)
 	m := c.MaxStorage()
 
 	if m != cache_size {
@@ -26,7 +26,7 @@ func TestBasics(t *testing.T) {
 
 func TestBasicSetAndGet(t *testing.T) {
 	cache_size := 1000
-	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE, 0.5)
 
 	for i := 0; i < 4; i++ {
 		key := fmt.Sprintf("key%d", i)
@@ -47,7 +47,7 @@ func TestBasicSetAndGet(t *testing.T) {
 
 func TestBasicEviction(t *testing.T) {
 	cache_size := 20
-	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE, 0.5)
 
 	for i := 0; i < 2; i++ {
 		key := fmt.Sprintf("!key%d", i)
@@ -104,7 +104,7 @@ func TestBasicEviction(t *testing.T) {
 func TestReweighting1(t *testing.T) {
 	numEntries := 2
 	cache_size := 8 * numEntries
-	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE, 0.5)
 
 	for i := 0; i < numEntries; i++ {
 		key := fmt.Sprintf("key%d", i)
