@@ -164,41 +164,31 @@ func (lecar *LeCaR) Remove(key string, policy string) (value []byte, ok bool) {
 		return val, ok
 	}
 
-	// if key exists, evict the key based on the chosen policy
-	// LFU
+	// remove from the cache
+	delete(lecar.cache, key)
+
+	// remove from LFU data structures
+	freq := lecar.LFUKeyToFreq[key]        // store the frequency of the key to be deleted
+	delete(lecar.LFUKeyToFreq, key)        // remove from LFU map
+	delete(lecar.LFUFreqToKeys[freq], key) // remove from map of keys with frequency freq
+	// don't remove the frequency from the heap (it's hard) just check if the min
+	// freq actually has keys associated with it
+
+	// remove from LRU data structures
+	ptr := lecar.LRUPointers[key]
+	_ = lecar.LRU.Remove(ptr)
+	delete(lecar.LRUPointers, key) //remove from pointers map
+
+	// add to the policy's eviction history
 	if policy == "LFU" {
-		delete(lecar.cache, key) // remove from the cache
-
-		// remove from LFU
-		freq := lecar.LFUKeyToFreq[key] // store the frequency of the key to be deleted
-		delete(lecar.LFUKeyToFreq, key) // remove from LFU map
-
-		// remove the key from the list of keys corresponding to one frequency
-		delete(lecar.LFUFreqToKeys[freq], key)
-
-		// add to historyLFU
 		lecar.historyLFU[key] = lecar.clock // value = current time
-
-		// decrease size by size of deletion
-		deletionSize := len(val) + len(key)
-		lecar.size = lecar.size - deletionSize
-
-	} else if policy == "LRU" { // LRU
-		delete(lecar.cache, key) // remove from the cache
-
-		// remove from the key list by searching for pointer
-		ptr := lecar.LRUPointers[key]
-		_ = lecar.LRU.Remove(ptr)
-		delete(lecar.LRUPointers, key) //remove from pointers map
-
-		// add to historyLRU
+	} else if policy == "LRU" {
 		lecar.historyLRU[key] = lecar.clock // value = current time
-
-		// decrease size by size of deletion
-		deletionSize := len(val) + len(key)
-		lecar.size = lecar.size - deletionSize
-
 	}
+
+	// decrease size by size of deletion
+	deletionSize := len(val) + len(key)
+	lecar.size = lecar.size - deletionSize
 
 	// increment the clock to keep track of number of evictions
 	lecar.clock = lecar.clock + 1
