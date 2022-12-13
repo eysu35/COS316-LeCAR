@@ -117,7 +117,7 @@ func TestReweighting1(t *testing.T) {
 	}
 
 	// for i := 0; i < 5; i++ {
-	// 	// make key0 the most frequently 
+	// 	// make key0 the most frequently
 	// 	for i := 0; i < 10; i++{
 	// 		c.Get("key0")
 	// 	}
@@ -126,19 +126,21 @@ func TestReweighting1(t *testing.T) {
 	// 	c.Get("key1")
 
 	// 	c.Set("key2", "key2")
-	// 	fmt.Println(c.WeightsToString) 
+	// 	fmt.Println(c.WeightsToString)
 	// 	}
 
-	for i := 0; i < 10; i++{
+	for i := 0; i < 10; i++ {
 		c.Get("key0")
 	}
 
 	// make key1 the most recently used
 	c.Get("key1")
 
-	c.Set("key2", "key2")
-	fmt.Println(c.WeightsToString) 
-	
+	c.Set("key2", []byte("key2"))
+	fmt.Println(c.HistoryToString())
+
+	c.Get("key1")
+	c.Get("key0")
+	fmt.Println(c.WeightsToString())
 
 }
-

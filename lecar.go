@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"time"
 )
 
 // LeCaR is a fixed-size in-memory cache that uses Learning Cache Replacement
@@ -31,7 +32,7 @@ type LeCaR struct {
 
 	LFUKeyToFreq  map[string]int         // maps keys to frequencies
 	LFUFreqToKeys map[int]map[string]int // maps freqs to list of keys
-	LFUFreqOrder  IntHeap                // keep a min-ordered list of freqs
+	LFUFreqOrder  *IntHeap               // keep a min-ordered list of freqs
 
 	// LRU
 	LRU         *list.List               // queue of least recently accessed keys
@@ -56,7 +57,7 @@ func NewLeCaR(limit int, learningRate float64, discountRate float64) *LeCaR {
 		clock:         0,
 		LFUKeyToFreq:  map[string]int{},
 		LFUFreqToKeys: map[int]map[string]int{},
-		LFUFreqOrder:  IntHeap{},
+		LFUFreqOrder:  &IntHeap{},
 		LRU:           list.New(),
 		LRUPointers:   map[string]*list.Element{},
 		historyLFU:    map[string]int{},
@@ -66,8 +67,9 @@ func NewLeCaR(limit int, learningRate float64, discountRate float64) *LeCaR {
 		learningRate:  learningRate,                             // initialized via LeCar paper
 		discountRate:  math.Pow(discountRate, 1/float64(limit))} // initialized via LeCaR paper
 
-	heap.Init(&r.LFUFreqOrder)
+	heap.Init(r.LFUFreqOrder)
 	r.LFUFreqToKeys[1] = make(map[string]int) // add the map for frequency of 1
+	heap.Push(r.LFUFreqOrder, 1)              // add frequency of 1 to heap order
 	return &r
 }
 
@@ -85,12 +87,12 @@ func (lecar *LeCaR) UpdateWeight(key string, time int, policy string) {
 	timePassed := lecar.clock - time
 	r := math.Pow(lecar.discountRate, float64(timePassed)) // discount rate, by LeCaR paper
 
-	// update relevant weight
-	if policy == "LFU" {
+	// increase the opposite weight
+	if policy == "LRU" {
 		lecar.wLFU = lecar.wLFU * math.Pow(math.E, lecar.learningRate*r) // update by LeCaR paper
 	}
 
-	if policy == "LRU" {
+	if policy == "LFU" {
 		lecar.wLRU = lecar.wLRU * math.Pow(math.E, lecar.learningRate*r) // update by LeCaR paper
 	}
 
@@ -217,7 +219,9 @@ func (lecar *LeCaR) Set(key string, value []byte) bool {
 	_, ok := lecar.cache[key]
 	if ok {
 		// if key exists, remove it from the cache since we want to update value
+		rand.Seed(time.Now().UnixNano())
 		sample := rand.Float64() // returns a float in [0.0. 1.0)
+		fmt.Println(sample)
 		// let random sample determine policy based on which weight interval it falls in
 		policy := ""
 		if sample <= lecar.wLFU {
@@ -233,7 +237,9 @@ func (lecar *LeCaR) Set(key string, value []byte) bool {
 
 		for lecar.RemainingStorage() < setSize {
 			// again, sample eviction policy from weights and evict accordingly
+			rand.Seed(time.Now().UnixNano())
 			sample := rand.Float64() // returns a float in [0.0. 1.0)
+			fmt.Println(sample)
 			// let random sample determine policy based on which weight interval it falls in
 			policy := ""
 			if sample <= lecar.wLFU {
