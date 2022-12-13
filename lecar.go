@@ -146,7 +146,7 @@ func (lecar *LeCaR) Get(key string) (value []byte, ok bool) {
 
 // Remove removes and returns the value associated with the given key, if it exists.
 // ok is true if a value was found and false otherwise
-func (lecar *LeCar) Remove(key string, policy string) (value []byte, ok bool) {
+func (lecar *LeCaR) Remove(key string, policy string) (value []byte, ok bool) {
 	val, ok := lecar.cache[key]
 
 	// if key not found, just return nil, false
@@ -156,21 +156,15 @@ func (lecar *LeCar) Remove(key string, policy string) (value []byte, ok bool) {
 
 	// if key exists, evict the key based on the chosen policy
 	// LFU
-	if policy == "lfu"{
+	if policy == "LFU" {
 		delete(lecar.cache, key) // remove from the cache
 
 		// remove from LFU
 		freq := lecar.LFUKeyToFreq[key] // store the frequency of the key to be deleted
 		delete(lecar.LFUKeyToFreq, key) // remove from LFU map
-		
+
 		// remove the key from the list of keys corresponding to one frequency
-		delete(lecar.LFUFreqToKeys[freq][key], freq) 
-		
-		/*
-		LAST THING TO DO HERE IS THE REMOVE THE FREQ FROM THE HEAP IF it is the min freq
-		but how do we know if we cant pop it? should we pop, check if its the min, and if not
-		push it again? Will that maintain order/ is that redundant???
-		*/
+		delete(lecar.LFUFreqToKeys[freq], key)
 
 		// add to historyLFU
 		lecar.historyLFU[key] = lecar.clock // value = current time
@@ -178,16 +172,14 @@ func (lecar *LeCar) Remove(key string, policy string) (value []byte, ok bool) {
 		// decrease size by size of deletion
 		deletionSize := len(val) + len(key)
 		lecar.size = lecar.size - deletionSize
-	}
 
-	// LRU
-	else if policy == "lru" {
+	} else if policy == "LRU" { // LRU
 		delete(lecar.cache, key) // remove from the cache
 
 		// remove from the key list by searching for pointer
 		ptr := lecar.LRUPointers[key]
-		_ = lru.LRU.Remove(ptr)
-		delete(lecar.LRUPointers, ptr)//remove from pointers map
+		_ = lecar.LRU.Remove(ptr)
+		delete(lecar.LRUPointers, key) //remove from pointers map
 
 		// add to historyLRU
 		lecar.historyLRU[key] = lecar.clock // value = current time
@@ -195,12 +187,12 @@ func (lecar *LeCar) Remove(key string, policy string) (value []byte, ok bool) {
 		// decrease size by size of deletion
 		deletionSize := len(val) + len(key)
 		lecar.size = lecar.size - deletionSize
-		
+
 	}
 
-	// increment the clock to keep track of number of evictions 
+	// increment the clock to keep track of number of evictions
 	lecar.clock = lecar.clock + 1
-	
+
 	return val, true
 }
 
@@ -217,12 +209,13 @@ func (lecar *LeCaR) Set(key string, value []byte) bool {
 	_, ok := lecar.cache[key]
 	if ok {
 		// if key exists, remove it from the cache since we want to update value
-		sample := math.rand.Float64() // returns a float in [0.0. 1.0)
+		sample := rand.Float64() // returns a float in [0.0. 1.0)
 		// let random sample determine policy based on which weight interval it falls in
-		if sample <= lecar.wLFU{
-			policy := "lfu"
-		}else{
-			policy := "lru"
+		policy := ""
+		if sample <= lecar.wLFU {
+			policy = "LFU"
+		} else {
+			policy = "LFU"
 		}
 		lecar.Remove(key, policy)
 	}
@@ -232,22 +225,35 @@ func (lecar *LeCaR) Set(key string, value []byte) bool {
 
 		for lecar.RemainingStorage() < setSize {
 			// again, sample eviction policy from weights and evict accordingly
-			sample := math.rand.Float64() // returns a float in [0.0. 1.0)
+			sample := rand.Float64() // returns a float in [0.0. 1.0)
 			// let random sample determine policy based on which weight interval it falls in
-			if sample <= lecar.wLFU{
-				policy := "lfu"
-			}else{
-				policy := "lru"
+			policy := ""
+			if sample <= lecar.wLFU {
+				policy = "LFU"
+			} else {
+				policy = "LRU"
 			}
 
-			if policy == "lfu"{
-				minFreq := lecar.LFUFreqOrder.Pop() // find the lowest frequency?
-				// is there a peek method for the minheap??? is it ok to pop this if there are more with this val?
-				keyRemove := lecar.LFUFreqToKeys[minFreq][0] // just evict the first key with the min freq
-				_, _ = lecar.Remove(keyRemove, policy)
+			if policy == "LFU" {
+				// find the lowest freq for which there is a key
+				minFreq := lecar.LFUFreqOrder.Pop().(int)
+				for len(lecar.LFUFreqToKeys[minFreq]) == 0 {
+					minFreq = lecar.LFUFreqOrder.Pop().(int)
+				}
+
+				// if more than one item has this frequency, put the freq back in the heap
+				if len(lecar.LFUFreqToKeys[minFreq]) > 1 {
+					heap.Push(lecar.LFUFreqOrder, minFreq)
+				}
+
+				// get an arbitrary key with the desired frequency
+				for keyRemove, _ := range lecar.LFUFreqToKeys[minFreq] {
+					_, _ = lecar.Remove(keyRemove, policy)
+					break
+				}
 			}
 
-			if policy == "lru"{
+			if policy == "LRU" {
 				keyTemp := lecar.LRU.Back().Value
 				keyRemove := keyTemp.(string)
 				_, _ = lecar.Remove(keyRemove, policy)
@@ -278,10 +284,10 @@ func (lecar *LeCaR) Set(key string, value []byte) bool {
 
 // Len returns the number of bindings in the LeCaR.
 func (lecar *LeCaR) Len() int {
-	return lru.keyList.Len()
+	return len(lecar.cache)
 }
 
 // Stats returns statistics about how many search hits and misses have occurred.
 func (lecar *LeCaR) Stats() *Stats {
-	return &lru.stats
+	return &lecar.stats
 }
