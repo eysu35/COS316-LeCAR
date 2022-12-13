@@ -83,6 +83,6 @@ func TestBasicEviction(t *testing.T) {
 		t.FailNow()
 	}
 
-	fmt.Println(c.toString())
-
+	fmt.Println(c.CacheToString())
+	fmt.Println(c.HistoryToString())
 }

@@ -298,11 +298,24 @@ func (lecar *LeCaR) Stats() *Stats {
 }
 
 // Examine contents of the cache
-func (lecar *LeCaR) toString() string {
+func (lecar *LeCaR) CacheToString() string {
 	str := ""
 	for key, val := range lecar.cache {
 		str = str + key + ": " + string(val) + "\n"
 	}
 	str = str + fmt.Sprintf("policy (LFU/LRU): %f/%f", lecar.wLFU, lecar.wLRU)
 	return str
+}
+
+// Examine contents of each history
+func (lecar *LeCaR) HistoryToString() string {
+	str := "LFU History: \n"
+	for key, val := range lecar.historyLFU {
+		str = str + key + ": " + string(val) + "\n"
+	}
+	str = str + "LRU History: \n"
+
+	for key, val = range lecar.historyLRU {
+		str = str + key + ": " + string(val) + "\n"
+	}
 }
