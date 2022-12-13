@@ -106,4 +106,39 @@ func TestReweighting1(t *testing.T) {
 	cache_size := 8 * numEntries
 	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE)
 
+	for i := 0; i < numEntries; i++ {
+		key := fmt.Sprintf("key%d", i)
+		val := []byte(key)
+		ok := c.Set(key, val)
+		if !ok {
+			t.Errorf("Failed to add binding with key: %s", key)
+			t.FailNow()
+		}
+	}
+
+	// for i := 0; i < 5; i++ {
+	// 	// make key0 the most frequently 
+	// 	for i := 0; i < 10; i++{
+	// 		c.Get("key0")
+	// 	}
+
+	// 	// make key1 the most recently used
+	// 	c.Get("key1")
+
+	// 	c.Set("key2", "key2")
+	// 	fmt.Println(c.WeightsToString) 
+	// 	}
+
+	for i := 0; i < 10; i++{
+		c.Get("key0")
+	}
+
+	// make key1 the most recently used
+	c.Get("key1")
+
+	c.Set("key2", "key2")
+	fmt.Println(c.WeightsToString) 
+	
+
 }
+
