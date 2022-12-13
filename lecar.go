@@ -295,3 +295,13 @@ func (lecar *LeCaR) Len() int {
 func (lecar *LeCaR) Stats() *Stats {
 	return &lecar.stats
 }
+
+// Examine contents of the cache
+func (lecar *LeCaR) toString() string {
+	str := ""
+	for key, val := range lecar.cache{
+		str = str + key + ": " + val.(string) + "\n"
+	}
+	str = str + "policy (LFU/LRU): " + lecar.wLFU.(string) + "/" lecar.wLRU.(string) 
+	return str
+}
