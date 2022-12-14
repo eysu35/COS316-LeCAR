@@ -19,16 +19,13 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 
-	c := NewLeCaR(64000, 0.45, 0.005, 0.5)
+	c := NewLeCaR(1000, 0.45, 0.005, 0.5)
 
 	for scanner.Scan() {
 		s := scanner.Text()
 
 		ints := strings.Split(s, " ")
 
-		// 3 items
-		// t, _ := strconv.Atoi(ints[0])
-		// id, _ := strconv.Atoi(ints[1])
 		id := ints[1]
 		size, _ := strconv.Atoi(ints[2])
 
@@ -43,4 +40,5 @@ func main() {
 	file.Close()
 
 	fmt.Println(c.stats.toString())
+	fmt.Println(c.WeightsToString())
 }
