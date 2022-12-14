@@ -149,7 +149,7 @@ func TestReweighting1(t *testing.T) {
 
 func TestReweighting2(t *testing.T) {
 	cache_size := 1000
-	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE, 0.5)
+	c := NewLeCaR(cache_size, 0.65, DISCOUNT_RATE, 0.5)
 
 	for i := 0; i < 100; i++ {
 		key := fmt.Sprintf("key%d", i)
