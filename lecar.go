@@ -220,7 +220,6 @@ func (lecar *LeCaR) Set(key string, value []byte) bool {
 		// if key exists, remove it from the cache since we want to update value
 		rand.Seed(time.Now().UnixNano())
 		sample := rand.Float64() // returns a float in [0.0. 1.0)
-		fmt.Println(sample)
 		// let random sample determine policy based on which weight interval it falls in
 		policy := ""
 		if sample <= lecar.wLFU {
@@ -238,7 +237,6 @@ func (lecar *LeCaR) Set(key string, value []byte) bool {
 			// again, sample eviction policy from weights and evict accordingly
 			rand.Seed(time.Now().UnixNano())
 			sample := rand.Float64() // returns a float in [0.0. 1.0)
-			fmt.Println(sample)
 			// let random sample determine policy based on which weight interval it falls in
 			policy := ""
 			if sample <= lecar.wLFU {

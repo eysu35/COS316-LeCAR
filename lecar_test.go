@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 )
 
 var LEARNING_RATE = 0.45
@@ -143,4 +145,51 @@ func TestReweighting1(t *testing.T) {
 	c.Get("key0")
 	fmt.Println(c.WeightsToString())
 
+}
+
+func TestReweighting2(t *testing.T) {
+	cache_size := 1000
+	c := NewLeCaR(cache_size, LEARNING_RATE, DISCOUNT_RATE, 0.5)
+
+	for i := 0; i < 100; i++ {
+		key := fmt.Sprintf("key%d", i)
+		val := []byte(key)
+		ok := c.Set(key, val)
+		if !ok {
+			t.Errorf("Failed to add binding with key: %s", key)
+			t.FailNow()
+		}
+	}
+
+	for i := 0; i < 1000; i++ {
+		// with 80% prob, get a key 0-99, with 20% insert a new key
+		rand.Seed(time.Now().UnixNano())
+		p := rand.Float64()
+
+		if p < 0.60 {
+			rand.Seed(time.Now().UnixNano())
+			d := rand.Intn(100)
+			fmt.Println(d)
+
+			key := fmt.Sprintf("key%d", d)
+			_, ok := c.Get(key)
+			if ok {
+				fmt.Println("hit!")
+			}
+		} else {
+			e := rand.Intn(100) + 101
+			key := fmt.Sprintf("key%d", e)
+			val := []byte(key)
+			ok := c.Set(key, val)
+			if !ok {
+				t.Errorf("Failed to add binding with key: %s", key)
+				t.FailNow()
+			}
+		}
+	}
+
+	fmt.Println(c.CacheToString())
+	fmt.Println(c.WeightsToString())
+	fmt.Println(c.stats.toString())
+	// fmt.Println(c.HistoryToString())
 }
